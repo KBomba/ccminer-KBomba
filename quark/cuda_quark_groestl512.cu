@@ -8,7 +8,7 @@
 #include <memory.h>
 
 // it's unfortunate that this is a compile time constant.
-#define MAXWELL_OR_FERMI 1
+#define MAXWELL_OR_FERMI 0
 
 // aus cpu-miner.c
 extern int device_map[8];

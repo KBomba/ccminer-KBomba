@@ -126,9 +126,6 @@ typedef enum {
 	ALGO_FUGUE256,		/* Fugue256 */
 	ALGO_GROESTL,
 	ALGO_MYR_GR,
-	ALGO_JACKPOT,
-	ALGO_QUARK,
-	ALGO_ANIME,
 	ALGO_NIST5,
 	ALGO_X11
 } sha256_algos;
@@ -139,9 +136,6 @@ static const char *algo_names[] = {
 	"fugue256",
 	"groestl",
 	"myr-gr",
-	"jackpot",
-	"quark",
-	"anime",
 	"nist5",
 	"x11"
 };
@@ -210,9 +204,6 @@ Options:\n\
                         mjollnir  Mjollnircoin hash\n\
                         groestl   Groestlcoin hash\n\
                         myr-gr    Myriad-Groestl hash\n\
-                        jackpot   Jackpot hash\n\
-                        quark     Quark hash\n\
-                        anime     Animecoin hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
@@ -762,9 +753,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 		free(xnonce2str);
 	}
 
-	if (opt_algo == ALGO_JACKPOT)
-		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
-	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
@@ -847,7 +836,7 @@ static void *miner_thread(void *userdata)
 			      - time(NULL);
 		max64 *= (int64_t)thr_hashrates[thr_id];
 		if (max64 <= 0)
-			max64 = (opt_algo == ALGO_JACKPOT) ? 0x1fffLL : 0xfffffLL;
+			max64 = 0xfffffLL;
 		if ((int64_t)work.data[19] + max64 > end_nonce)
 			max_nonce = end_nonce;
 		else
@@ -881,21 +870,6 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_MYR_GR:
 			rc = scanhash_myriad(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_JACKPOT:
-			rc = scanhash_jackpot(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_QUARK:
-			rc = scanhash_quark(thr_id, work.data, work.target,
-			                      max_nonce, &hashes_done);
-			break;
-
-		case ALGO_ANIME:
-			rc = scanhash_anime(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
