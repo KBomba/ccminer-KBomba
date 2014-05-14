@@ -127,7 +127,8 @@ typedef enum {
 	ALGO_GROESTL,
 	ALGO_MYR_GR,
 	ALGO_NIST5,
-	ALGO_X11
+	ALGO_X11,
+	ALGO_DMD_GR
 } sha256_algos;
 
 static const char *algo_names[] = {
@@ -137,7 +138,8 @@ static const char *algo_names[] = {
 	"groestl",
 	"myr-gr",
 	"nist5",
-	"x11"
+	"x11",
+	"dmd-gr"
 };
 
 bool opt_debug = false;
@@ -206,6 +208,7 @@ Options:\n\
                         myr-gr    Myriad-Groestl hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
+						dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -697,7 +700,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR)
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	else
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -880,6 +883,11 @@ static void *miner_thread(void *userdata)
 
 		case ALGO_X11:
 			rc = scanhash_x11(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+		case ALGO_DMD_GR:
+			rc = scanhash_groestlcoin(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
 
