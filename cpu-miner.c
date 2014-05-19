@@ -55,6 +55,7 @@ extern "C"
 {
 #endif
 int cuda_num_devices();
+void cuda_devicenames();
 int cuda_finddevice(char *name);
 #ifdef __cplusplus
 }
@@ -172,6 +173,7 @@ bool opt_trust_pool = false;
 uint16_t opt_vote = 9999;
 static int num_processors;
 int device_map[8] = {0,1,2,3,4,5,6,7}; // CB
+char *device_name[8]; // CB
 static char *rpc_url;
 static char *rpc_userpass;
 static char *rpc_user, *rpc_pass;
@@ -783,6 +785,7 @@ static void *miner_thread(void *userdata)
 	unsigned char *scratchbuf = NULL;
 	char s[16];
 	int i;
+	static int rounds = 0;
 
 	memset(&work, 0, sizeof(work)); // prevent work from being used uninitialized
 
@@ -922,6 +925,9 @@ static void *miner_thread(void *userdata)
 			goto out;
 		}
 
+		if (opt_benchmark)
+			if (++rounds == 1) exit(0);
+
 		/* record scanhash elapsed time */
 		gettimeofday(&tv_end, NULL);
 		timeval_subtract(&diff, &tv_end, &tv_start);
@@ -934,8 +940,10 @@ static void *miner_thread(void *userdata)
 		if (!opt_quiet) {
 			sprintf(s, thr_hashrates[thr_id] >= 1e6 ? "%.0f" : "%.2f",
 				1e-3 * thr_hashrates[thr_id]);
-			applog(LOG_INFO, "thread %d: %lu hashes, %s khash/s",
-				thr_id, hashes_done, s);
+			applog(LOG_INFO, "GPU #%d: %s, %s khash/s",
+				device_map[thr_id], device_name[thr_id], s);
+//			applog(LOG_INFO, "thread %d: %lu hashes, %s khash/s",
+//				thr_id, hashes_done, s);
 		}
 		if (opt_benchmark && thr_id == opt_n_threads - 1) {
 			double hashrate = 0.;
@@ -1498,6 +1506,8 @@ int main(int argc, char *argv[])
 
 	/* parse command line */
 	parse_cmdline(argc, argv);
+
+	cuda_devicenames();
 
 	if (!opt_benchmark && !rpc_url) {
 		fprintf(stderr, "%s: no URL supplied\n", argv[0]);
