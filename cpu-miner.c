@@ -130,8 +130,15 @@ typedef enum {
 	ALGO_JACKPOT,
 	ALGO_QUARK,
 	ALGO_ANIME,
+	ALGO_QUBIT,
+	ALGO_FRESH,
 	ALGO_NIST5,
-	ALGO_X11
+	ALGO_X11,
+	ALGO_X13,
+	ALGO_X14,
+	ALGO_X15,
+	ALGO_WHIRLCOIN,
+	ALGO_DMD_GR,
 } sha256_algos;
 
 static const char *algo_names[] = {
@@ -143,8 +150,15 @@ static const char *algo_names[] = {
 	"jackpot",
 	"quark",
 	"anime",
+	"qubit",
+	"fresh",
 	"nist5",
-	"x11"
+	"x11",
+	"x13",
+	"x14",
+	"x15",
+	"whirlcoin",
+	"dmd-gr",
 };
 
 bool opt_debug = false;
@@ -215,8 +229,15 @@ Options:\n\
                         jackpot   Jackpot hash\n\
                         quark     Quark hash\n\
                         anime     Animecoin hash\n\
+						qubit     qubitcoin hash\n\
+						fresh     freshcoin hash\n\
                         nist5     NIST5 (TalkCoin) hash\n\
                         x11       X11 (DarkCoin) hash\n\
+                        x13       X13 (MaruCoin) hash\n\
+						x14       X14 (MoronCoin) hash\n\
+						x15       X15 (BitBlock) hash\n\
+						whirlcoin   whirlcoin hash\n\
+                        dmd-gr    Diamond-Groestl hash\n\
   -d, --devices         takes a comma separated list of CUDA devices to use.\n\
                         Device IDs start counting from 0! Alternatively takes\n\
                         string names of your cards like gtx780ti or gt640#2\n\
@@ -708,7 +729,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 	if (opt_algo == ALGO_HEAVY || opt_algo == ALGO_MJOLLNIR)
 		heavycoin_hash(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
 	else
-	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
+	if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo ==  ALGO_WHIRLCOIN)
 		SHA256((unsigned char*)sctx->job.coinbase, sctx->job.coinbase_size, (unsigned char*)merkle_root);
 	else
 		sha256d(merkle_root, sctx->job.coinbase, (int)sctx->job.coinbase_size);
@@ -766,7 +787,7 @@ static void stratum_gen_work(struct stratum_ctx *sctx, struct work *work)
 
 	if (opt_algo == ALGO_JACKPOT)
 		diff_to_target(work->target, sctx->job.diff / (65536.0 * opt_difficulty));
-	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL)
+	else if (opt_algo == ALGO_FUGUE256 || opt_algo == ALGO_GROESTL || opt_algo == ALGO_DMD_GR || opt_algo == ALGO_FRESH)
 		diff_to_target(work->target, sctx->job.diff / (256.0 * opt_difficulty));
 	else
 		diff_to_target(work->target, sctx->job.diff / opt_difficulty);
@@ -878,6 +899,7 @@ static void *miner_thread(void *userdata)
 			break;
 
 		case ALGO_GROESTL:
+		case ALGO_DMD_GR:
 			rc = scanhash_groestlcoin(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
@@ -901,7 +923,14 @@ static void *miner_thread(void *userdata)
 			rc = scanhash_anime(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
 			break;
-
+		case ALGO_QUBIT:
+			rc = scanhash_qubit(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+        case ALGO_FRESH:
+			rc = scanhash_fresh(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
 		case ALGO_NIST5:
 			rc = scanhash_nist5(thr_id, work.data, work.target,
 			                      max_nonce, &hashes_done);
@@ -912,6 +941,24 @@ static void *miner_thread(void *userdata)
 			                      max_nonce, &hashes_done);
 			break;
 
+		case ALGO_X13:
+			rc = scanhash_x13(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+        case ALGO_X14:
+			rc = scanhash_x14(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+        case ALGO_X15:
+			rc = scanhash_x15(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
+
+        case ALGO_WHIRLCOIN:
+			rc = scanhash_test(thr_id, work.data, work.target,
+			                      max_nonce, &hashes_done);
+			break;
 		default:
 			/* should never happen */
 			goto out;
@@ -1469,7 +1516,7 @@ static void signal_handler(int sig)
 }
 #endif
 
-#define PROGRAM_VERSION "1.1"
+#define PROGRAM_VERSION "1.2"
 int main(int argc, char *argv[])
 {
 	struct thr_info *thr;
