@@ -49,11 +49,20 @@ static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
     a[1+(8*j)] = a[0+(8*j)] ^ tmp;\
     a[0+(8*j)] = tmp;
 
-#define TWEAK(a0,a1,a2,a3,j)\
+#if __CUDA_ARCH__ >= 500
+	#define TWEAK(a0,a1,a2,a3,j)\
+    a0 = SPH_ROTL32(a0, j);\
+    a1 = SPH_ROTL32(a1, j);\
+    a2 = SPH_ROTL32(a2, j);\
+    a3 = SPH_ROTL32(a3, j);
+   } 
+#else
+	#define TWEAK(a0,a1,a2,a3,j)\
     a0 = (a0<<(j))|(a0>>(32-j));\
     a1 = (a1<<(j))|(a1>>(32-j));\
     a2 = (a2<<(j))|(a2>>(32-j));\
     a3 = (a3<<(j))|(a3>>(32-j));
+#endif
 
 #define STEP(c0,c1)\
     SUBCRUMB(chainv[0],chainv[1],chainv[2],chainv[3],tmp);\
@@ -83,7 +92,18 @@ static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
     a1 ^= a0;\
     a0  = a4;
 
-#define MIXWORD(a0,a4)\
+#if __CUDA_ARCH__ >= 500
+	#define MIXWORD(a0,a4)\
+    a4 ^= a0;\
+    a0  = SPH_ROTL32(a0, 2);\
+    a0 ^= a4;\
+    a4  = SPH_ROTL32(a4, 14);\
+    a4 ^= a0;\
+    a0  = SPH_ROTL32(a0, 10);\
+    a0 ^= a4;\
+    a4  = SPH_ROTL32(a0, 1);\;   
+#else
+	#define MIXWORD(a0,a4)\
     a4 ^= a0;\
     a0  = (a0<<2) | (a0>>(30));\
     a0 ^= a4;\
@@ -92,6 +112,7 @@ static __device__ __forceinline__ uint32_t BYTES_SWAP32(uint32_t x)
     a0  = (a0<<10) | (a0>>(22));\
     a0 ^= a4;\
     a4  = (a4<<1) | (a4>>(31));
+#endif
 
 #define ADD_CONSTANT(a0,b0,c0,c1)\
     a0 ^= c0;\

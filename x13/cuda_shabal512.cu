@@ -161,14 +161,24 @@ static const uint32_t B_init_512[] = {
 		SWAP(BE, CE); \
 		SWAP(BF, CF); \
 	} 
-
-#define PERM_ELT(xa0, xa1, xb0, xb1, xb2, xb3, xc, xm)    { \
+#if __CUDA_ARCH__ >= 500
+	#define PERM_ELT(xa0, xa1, xb0, xb1, xb2, xb3, xc, xm)    { \
+      xa0 = T32((xa0 \
+         ^ ((SPH_ROTL32(xa1, 15) * 5U) \
+         ^ xc) * 3U) \
+         ^ xb1 ^ (xb2 & ~xb3) ^ xm; \
+      xb0 = T32(~((SPH_ROTL32(xb0, 1) ^ xa0)); \
+   } 
+#else
+	#define PERM_ELT(xa0, xa1, xb0, xb1, xb2, xb3, xc, xm)    { \
 		xa0 = T32((xa0 \
 			^ (((xa1 << 15) | (xa1 >> 17)) * 5U) \
 			^ xc) * 3U) \
 			^ xb1 ^ (xb2 & ~xb3) ^ xm; \
 		xb0 = T32(~(((xb0 << 1) | (xb0 >> 31)) ^ xa0)); \
 	} 
+#endif
+
 
 #define PERM_STEP_0    { \
 		PERM_ELT(A00, A0B, B0, BD, B9, B6, C8, M0); \

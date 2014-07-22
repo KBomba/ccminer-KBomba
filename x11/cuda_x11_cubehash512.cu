@@ -21,8 +21,16 @@ typedef unsigned long long DataLength;
 
 typedef unsigned int uint32_t; /* must be exactly 32 bits */
 
-#define ROTATEUPWARDS7(a) (((a) << 7) | ((a) >> 25))
-#define ROTATEUPWARDS11(a) (((a) << 11) | ((a) >> 21))
+
+#if __CUDA_ARCH__ >= 500
+	#define ROTATEUPWARDS7(a) (SPH_ROTL32(a, 7))
+	#define ROTATEUPWARDS11(a) (SPH_ROTL32(a, 11))
+#else
+	#define ROTATEUPWARDS7(a) (((a) << 7) | ((a) >> 25))
+	#define ROTATEUPWARDS11(a) (((a) << 11) | ((a) >> 21))
+#endif
+
+
 #define SWAP(a,b) { uint32_t u = a; a = b; b = u; }
 
 __constant__ uint32_t c_IV_512[32];
